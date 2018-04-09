@@ -1,0 +1,22 @@
+.aw-widget-itembox {
+    max-width: 80%;
+    height: 100px;
+    overflow-y: scroll;
+    border: 1px solid #ccc;
+}
+
+.aw-widget-itembox .aw-widget-itembox-row {
+    border-bottom: 1px solid #ccc;
+    margin:5px;
+}
+
+.aw-typingtable .aw-data-cell {
+    padding: 0;
+}
+
+.aw-typingtable .aw-data-cell input {
+    width:100%;
+    height:100%;
+    border:none;
+    background:transparent;
+}

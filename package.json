@@ -1,0 +1,14 @@
+{
+  "name": "aw-component",
+  "version": "1.0.0",
+  "description": "ui component for backoffice",
+  "main": "aw-component.js",
+  "repository": "https://github.com/fz19/aw-component",
+  "author": "Hyungyu Lim <flashizm@gmail.com>",
+  "license": "Apache License 2.0",
+  "dependencies": {
+    "blueimp-tmpl": "https://github.com/blueimp/JavaScript-Templates",
+    "jquery": "1",
+    "jquery-ui": "1"
+  }
+}
