@@ -54,36 +54,15 @@
                 target = '';
 
             $('.aw-itembox').each(function(i, el) {
-                var options = {};
-                var $el = $(el);
+                var options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item'], el);
+                $(el).itembox(options);
+            });
 
-                if ($el.attr('data-tmpl')) {
-                    var $tmpl = $($el.attr('data-tmpl'));
-
-                    if ($tmpl.length) {
-                        var $btn_remove = $tmpl.find('.tmpl_btn_remove');
-                        if ($btn_remove.length) {
-                            options.tmpl_btn_remove = $btn_remove.prop('outerHTML');
-                            $btn_remove.remove();
-                        }
-
-                        var $item = $tmpl.find('.tmpl_item');
-                        if ($item.length) {
-                            options.tmpl_item = $item.prop('outerHTML');
-                            $item.remove();
-                        }
-
-                        $tmpl.remove();
-                    }
-                }
-
-                if ($el.attr('data-tmpl-item'))
-                    options.tmpl_item = $el.attr('data-tmpl-item');
-
-                if ($el.attr('data-tmpl-btn-remove'))
-                    options.tmpl_btn_remove = $el.attr('data-tmpl-btn-remove');
-
-                $el.itembox(options);
+            $('.aw-multiupload').each(function(i, el) {
+                var template_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item'], el);
+                $(el).multiupload({
+                    itembox_options: template_options
+                });
             });
 
             $('.aw-typingtable').typingtable();
@@ -113,6 +92,39 @@
             };
 
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        },
+
+        initWidgetTemplateOptions: function(optionNames, el) {
+            if (typeof optionNames == 'string')
+                optionNames = [optionNames];
+            else if (!(optionNames instanceof Array))
+                return;
+
+            var options = {};
+            var $el = $(el);
+
+            if ($el.attr('data-tmpl')) {
+                var $tmpl = $($el.attr('data-tmpl'));
+
+                if ($tmpl.length) {
+                    for (var i in optionNames) {
+                        var $item_tmpl = $tmpl.find('.tmpl_' + optionNames[i]);
+                        if ($item_tmpl.length) {
+                            options['tmpl_' + optionNames[i]] = $item_tmpl.prop('outerHTML');
+                        }
+                    }
+
+                    $tmpl.hide();
+                }
+            }
+
+            for (var i in optionNames) {
+                if ($el.attr('data-tmpl' + optionNames[i])) {
+                    options['tmpl_' + optionNames[i]] = $el.attr('data-tmpl-' + optionNames[i].replace(/_/g, '-'));
+                }
+            }
+
+            return options;
         },
 
         textFormat: function(format, text) {
@@ -201,19 +213,21 @@ $.widget('custom.itembox', {
         tmpl_btn_remove: '<button>X</button>',
         is_btn_remove: true
     },
+    $itembox: null,
 
     _create: function() {
         var $target = $(this.element);
         $target.attr('type', 'hidden');
+        $target.addClass('aw-itembox');
 
-        var $widget = $(this.options.tmpl_box);
-        $widget.addClass('aw-widget-itembox')
+        this.$itembox = $(this.options.tmpl_box);
+        this.$itembox.addClass('aw-widget-itembox')
             .on('click', '.aw-widget-itembox-remove', function(e) {
                 e.preventDefault();
                 $(this).parent().remove();
             });
 
-        $target.after($widget);
+        $target.after(this.$itembox);
 
         try {
             console.log($target.val());
@@ -227,9 +241,6 @@ $.widget('custom.itembox', {
     },
 
     add: function(args) {
-        var $widget = $(this.element).next();
-        if (!$widget.hasClass('aw-widget-itembox')) return;
-
         if (typeof args == 'string') {
             $row = $(this.options.tmpl_item);
             $row.html(args);
@@ -245,7 +256,13 @@ $.widget('custom.itembox', {
             $row.append($btn_remove);
         }
 
-        $widget.append($row);
+        this.$itembox.append($row);
+
+        return $row;
+    },
+
+    clear: function() {
+        this.$itembox.find('.aw-widget-itembox-row').remove();
     }
 });
 
@@ -254,6 +271,7 @@ $.widget('custom.typingtable', {
 
     _create: function() {
         var $target = $(this.element);
+        $target.addClass('aw-typingtable');
         $target.find('.aw-data-cell').each(function (i, el) {
             var $el = $(el);
             var $input = $('<input />');
@@ -311,7 +329,9 @@ $.widget('custom.typingtable', {
 
             $row.children().each(function (i, el2) {
                 var cellName = el2.tagName;
-                $cellElements.filter('[name=' + cellName + ']').find('input').val($(el2).text());
+                $cellElements.filter('[name=' + cellName + ']').find('input')
+                                .val($(el2).text())
+                                .trigger('keyup');
             });
 
             nameCount[name]++;
@@ -330,4 +350,171 @@ $.widget('custom.typingtable', {
 
         $input.val(this.saveXML());
     }
+});
+
+$.widget('custom.multiupload', {
+    options: {
+        uploadURL: '/upload.php',
+        allow_extension: ['doc','docs','xls','xlsx','ppt','pptx','pdf','jpg','jpeg','png','gif','tif','hwp','txt'],
+        itembox: null,
+        itembox_options: {},
+        maxsize: 10485760
+    },
+    $fileinput: null,
+    $filebox: null,
+
+    _create: function() {
+        var $target = $(this.element);
+
+        $target.addClass('aw-multiupload');
+        this.$fileinput = $('<input type="file" name="uploadfiles[]" multiple />');
+        this.$fileinput.insertAfter($target);
+        this.$fileinput.bind('change', $.proxy(this.changeHandler, this));
+
+        if (this.options.itembox) {
+            this.$filebox = $(this.options.itembox);
+        } else {
+            this.$filebox = $('<input>').insertAfter(this.$fileinput).itembox(this.options.itembox_options);
+        }
+
+        try {
+            uploaded_list = $.parseJSON($target.val());
+            this.addJSON(uploaded_list);
+        } catch (e) {}
+    },
+
+    changeHandler: function(e) {
+        var input = e.target;
+
+        if (!input.value)
+            return;
+
+        var count = input.files.length;
+        for (i=0; i<count; i++) {
+            try {
+                var filename = input.files[i].name;
+                var filesize = input.files[i].size;
+                var fileext = filename.split('.').pop().toLowerCase();
+            } catch (e) {
+                console.log(e);
+                continue;
+            }
+
+            var is_allow_ext = false;
+            if (!$.inArray(fileext, input.allow_extension)) {
+                alert("업로드 할 수 없는 파일 유형입니다.");
+                input.value = "";
+                return;
+            }
+
+            var totalsize = filesize;
+            if (totalsize > this.options.maxsize)
+            {
+                alert("파일 용량은 " + (this.options.maxsize/1024/1024) + "MB를 초과할 수 없습니다.");
+                input.value = "";
+                return;
+            }
+        }
+
+        if (count > 0) {
+            var multiupload = this;
+            var $input = $(input);
+            var $form = $('<form>')
+                        .attr('action', this.options.uploadURL)
+                        .attr('method', 'post')
+                        .attr('enctype', 'multipart/form-data');
+
+            // $('body').append($form);
+
+            $form.insertAfter($input);
+            $form.append($input);
+
+            $form.ajaxForm({
+                beforeSubmit: function(data,form,option) {
+                    return true;
+                },
+                success: function (response, status) {
+                    uploaded_list = $.parseJSON(response);
+                    multiupload.addJSON(uploaded_list);
+                },
+                error: function () {
+                    alert("파일 업로드에 실패하였습니다.");
+                }
+            });
+            $form.submit();
+            $input.unwrap();
+        }
+
+        input.value = '';
+    },
+
+    addJSON: function(uploaded_list) {
+        for (var i in uploaded_list) {
+            var $row = this.$filebox.itembox('add', {
+                'name': uploaded_list[i].name,
+                'size': $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].size / 1024)) + 'kb',
+                'link': uploaded_list[i].link
+            });
+            $row.attr('data-json', JSON.stringify(uploaded_list[i]));
+        }
+    },
+
+    updateData: function() {
+        var filelist = '[';
+
+        this.$itembox.find('.aw-widget-itembox-row').each(function (i, el) {
+            if (i > 0) filelist += ',';
+            filelist += $(el).attr('data-json');
+        });
+
+        filelist += ']';
+
+        $(this.element).val(filelist);
+    }
+
+    // changeHandler: function(e) {
+    //     var input = e.target;
+
+    //     if (!input.value)
+    //         return;
+
+    //     var count = input.files.length;
+    //     for (i=0; i<count; i++) {
+    //         try {
+    //             var filename = input.files[i].name;
+    //             var filesize = input.files[i].size;
+    //             var fileext = filename.split('.').pop().toLowerCase();
+    //         } catch (e) {
+    //             console.log(e);
+    //             continue;
+    //         }
+
+    //         var is_allow_ext = false;
+    //         if (!$.inArray(fileext, input.allow_extension)) {
+    //             alert("업로드 할 수 없는 파일 유형입니다.");
+    //             input.value = "";
+    //             return;
+    //         }
+
+    //         // var totalsize = filesize;
+    //         // $('.file_size').each(function(i, el) {
+    //         //     totalsize += Number($(this).attr('data-byte'));
+    //         // });
+
+    //         // if (totalsize > 31457280) // 30MB
+    //         // {
+    //         //     pb_alert(__text_message147); // 파일은 30MB를 초과할 수 없습니다.
+    //         //     input.value = "";
+    //         //     return;
+    //         // }
+
+    //         this.$filebox.itembox('add', {
+    //             'name': filename,
+    //             'size': Math.ceil(filesize / 1024) + 'kb',
+    //             'link': '#'
+    //         });
+    //     }
+
+    //     input.value = "";
+    // },
 });

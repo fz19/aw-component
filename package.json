@@ -9,6 +9,7 @@
   "dependencies": {
     "blueimp-tmpl": "https://github.com/blueimp/JavaScript-Templates",
     "jquery": "1",
+    "jquery-form": "^4.2.2",
     "jquery-ui": "1"
   }
 }
