@@ -66,6 +66,23 @@
             });
 
             $('.aw-typingtable').typingtable();
+
+            $('.aw-multidropdown').each(function(i, el) {
+                var options = {};
+                var $el = $(el);
+
+                // if ($el.attr('data-source-url'))
+                options.sourceURL = $el.attr('data-source-url');
+
+                // if ($el.attr('data-source-url'))
+                try {
+                    options.sourceKeyValueID = $.parseJSON($el.attr('data-source-keyvalueid'));
+                } catch (e) {
+                    console.log(e);
+                }
+
+                $el.multidropdown(options);
+            });
         },
 
         disableBackspaceKey: function() {
@@ -114,7 +131,7 @@
                         }
                     }
 
-                    $tmpl.hide();
+                    $tmpl.remove();
                 }
             }
 
@@ -203,6 +220,52 @@
 
             return text;
         },
+
+        toInt: function(str) {
+            try {
+                var n = parseInt(str.replace(/,/g, ''), 10);
+                return isNaN(n) ? 0 : n;
+            } catch (e) {
+                console.log(e);
+                return 0;
+            }
+        },
+
+        bindFormValues: function(element, data) {
+            if (!data)
+                data = $(element).attr('data-json') ? $.parseJSON($(element).attr('data-json')) : null;
+
+            if (!data || typeof data !== 'object')
+                return false;
+
+            $(element).find('.aw-bind-data').each(function(i, el) {
+                var $el = $(el);
+                var name = $el.attr('data-bind');
+                if ( !name && $el.attr('name') )
+                    name = $el.attr('name').replace(/\[\]/g, '');
+                if ( !name || !(name in data) )
+                    return true; // loop continue
+
+                var value = data[name];
+
+                switch ($el[0].tagName) {
+                    case "SPAN":
+                    case "DIV":
+                        $el.text(value);
+                        break;
+                    case "INPUT":
+                        var type = $el.attr('type');
+                        if (type == 'checkbox' || type == 'radio') {
+                            $el.prop('checked', $el.val() == value);
+                        }
+                        // continue below
+                    default:
+                        $el.val(value);
+                }
+            });
+
+            return data;
+        }
     }
 })(jQuery);
 
@@ -210,7 +273,7 @@ $.widget('custom.itembox', {
     options: {
         tmpl_box: '<div />',
         tmpl_item: '<div />',
-        tmpl_btn_remove: '<button>X</button>',
+        tmpl_btn_remove: '<button type="button">X</button>',
         is_btn_remove: true
     },
     $itembox: null,
@@ -230,9 +293,9 @@ $.widget('custom.itembox', {
         $target.after(this.$itembox);
 
         try {
-            console.log($target.val());
-            var data = $.parseJSON($target.val());
-            console.log(data);
+            var val = $target.val();
+            if (val[0] != '[')val = '[' + val + ']';
+            var data = $.parseJSON(val);
             for (var i in data)
                 this.add(data[i]);
         } catch (e) {
@@ -263,6 +326,10 @@ $.widget('custom.itembox', {
 
     clear: function() {
         this.$itembox.find('.aw-widget-itembox-row').remove();
+    },
+
+    getElement: function() {
+        return this.$itembox;
     }
 });
 
@@ -274,8 +341,11 @@ $.widget('custom.typingtable', {
         $target.addClass('aw-typingtable');
         $target.find('.aw-data-cell').each(function (i, el) {
             var $el = $(el);
-            var $input = $('<input />');
+            var $input = $el.children('input');
+            if ($input.length)
+                return true;
 
+            $input = $('<input />');
             $input.val($el.html());
             $input.attr('name', $el.attr('name'));
             $input.attr('class', $el.attr('class'));
@@ -517,4 +587,72 @@ $.widget('custom.multiupload', {
 
     //     input.value = "";
     // },
+});
+
+$.widget('custom.multidropdown', {
+    options: {
+        sourceURL: '/utils/district/$1/$2',
+        sourceKeyValueID: [
+            ['category1', 'sido'],
+            ['category2', 'sigungu'],
+            ['category3', 'dong']
+        ]
+    },
+    $select: null,
+    changeHandler: function(e) {
+        var select = e.target;
+        var index = this.$selects.index(select);
+
+        if (index < (this.$selects.length-1)) {
+            var $next_select = this.$selects.eq(index+1);
+            this.ajaxGetList($next_select);
+        }
+    },
+
+    ajaxGetList: function($select) {
+        var index = this.$selects.index($select);
+
+        var requestURL = this.options.sourceURL;
+        for (var i=0; i<this.$selects.length; i++) {
+            var arg = i < index ? this.$selects.eq(i).val() : '';
+            requestURL = requestURL.replace('$' + (i+1), arg);
+        }
+
+        $select.children().remove();
+
+		$.get(requestURL, $.proxy(function(data) {
+			try {
+				list = $.parseJSON(data);
+                for (var i in list) {
+                    var row = list[i];
+                    var $option = $('<option>')
+                                    .attr('value', row[this.options.sourceKeyValueID[index][0]])
+                                    .text(row[this.options.sourceKeyValueID[index][1]]);
+
+                    $select.append($option);
+                }
+			} catch (err) {
+				console.log(err);
+            }
+
+            $select.trigger('change');
+        }, this));
+    },
+
+    _create: function() {
+        //TODO: 기본값(수정시 이전 입력값) 고려 필요
+
+        this.$selects = $(this.element).find('.aw-multidropdown-select');
+        this.$selects.each(function(e) {
+            $(this).children().remove();
+            $(this).append('<option value="">-</option>')
+        })
+        .bind('change', $.proxy(this.changeHandler, this));
+
+        this.ajaxGetList(this.$selects.eq(0));
+
+        // for (var i=1; i<this.$selects.length; i++) {
+
+        // }
+    }
 });
