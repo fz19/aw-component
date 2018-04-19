@@ -358,8 +358,17 @@ $.widget('custom.typingtable', {
 
     saveXML: function() {
         var $target = $(this.element);
+        var top_attrs = '';
+
+        $.each(this.element.attributes, function() {
+            if (!this.specified || this.name.indexOf('data-attr-') == -1)
+                return true;
+
+            top_attr += ' ' + this.name.replace('data-attr-') + '="' + $.awcomponent.escapeHtml(this.value) + '"';
+        });
+
         var wraptag = $target.attr('name');
-        var outputXML = "<" + wraptag + ">\n";
+        var outputXML = "<" + wraptag + top_attrs + ">\n";
         $target.find('.aw-data-row').each(function(i, el) {
             outputXML += "  <row name=\"" + $(el).attr('name') + "\">\n";
             $(el).children('.aw-data-cell').each(function(i, el2) {
@@ -384,6 +393,13 @@ $.widget('custom.typingtable', {
         var $topNode = $xml.children(wraptag);
         if (!$topNode.length) return;
 
+        $.each($topNode[0].attributes, function() {
+            if (!this.specified)
+                return true;
+
+            $target.attr('data-attr-' + this.name, this.value);
+        });
+
         var $rowElements = $target.find('.aw-data-row');
         var nameCount = {};
 
@@ -406,6 +422,8 @@ $.widget('custom.typingtable', {
 
             nameCount[name]++;
         });
+
+        return $xml;
     },
 
     clearData: function() {
