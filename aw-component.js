@@ -54,13 +54,39 @@
                 target = '';
 
             $('.aw-itembox').each(function(i, el) {
-                var options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item'], el);
+                var options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item', 'box'], el);
+
+                if ($(el).attr('data-is-btn-remove'))
+                    options.is_btn_remove = $(el).attr('data-is-btn-remove') == 'false' ? false : true;
+
+                if ($(el).attr('data-box'))
+                    options.box = $(el).attr('data-box');
+
                 $(el).itembox(options);
             });
 
+            $('.aw-preupload').each(function(i, el) {
+                var options = {};
+
+                if ($(el).attr('data-preview'))
+                    options.preview = $(el).attr('data-preview');
+
+                if ($(el).attr('data-upload-url'))
+                    options.uploadURL = $(el).attr('data-upload-url');
+
+                $(el).preupload(options);
+            });
+
             $('.aw-multiupload').each(function(i, el) {
-                var template_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item'], el);
+                var template_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item', 'box'], el);
                 $(el).multiupload({
+                    itembox_options: template_options
+                });
+            });
+
+            $('.aw-dataform').each(function(i, el) {
+                var template_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item', 'box'], el);
+                $(el).dataform({
                     itembox_options: template_options
                 });
             });
@@ -74,11 +100,12 @@
                 // if ($el.attr('data-source-url'))
                 options.sourceURL = $el.attr('data-source-url');
 
-                // if ($el.attr('data-source-url'))
-                try {
-                    options.sourceKeyValueID = $.parseJSON($el.attr('data-source-keyvalueid'));
-                } catch (e) {
-                    console.log(e);
+                if ($el.attr('data-source-keyvalueid')) {
+                    try {
+                        options.sourceKeyValueID = $.parseJSON($el.attr('data-source-keyvalueid'));
+                    } catch (e) {
+                        console.log(e);
+                    }
                 }
 
                 $el.multidropdown(options);
@@ -134,6 +161,7 @@
                     $tmpl.remove();
                 }
             }
+            console.log(options);
 
             for (var i in optionNames) {
                 if ($el.attr('data-tmpl' + optionNames[i])) {
@@ -246,31 +274,65 @@
                 if ( !name || !(name in data) )
                     return true; // loop continue
 
-                var value = data[name];
-
-                switch ($el[0].tagName) {
-                    case "SPAN":
-                    case "DIV":
-                        $el.text(value);
-                        break;
-                    case "INPUT":
-                        var type = $el.attr('type');
-                        if (type == 'checkbox' || type == 'radio') {
-                            $el.prop('checked', $el.val() == value);
-                        }
-                        // continue below
-                    default:
-                        $el.val(value);
-                }
+                $.awcomponent.setElementValue(el, data[name]);
             });
 
             return data;
+        },
+
+        getElementValue: function(el) {
+            var $el = $(el);
+            var result = '';
+
+            switch ($el[0].tagName) {
+                case "SPAN":
+                case "DIV":
+                    result = $el.text();
+                    break;
+                case "IMG":
+                    result = $el.attr('src');
+                    break;
+                case "INPUT":
+                    var type = $el.attr('type');
+                    if (type == 'checkbox' || type == 'radio') {
+                        if (!$el.prop('checked'))
+                            break;
+                    }
+                    // continue below
+                default:
+                    result = $el.val();
+            }
+
+            return result;
+        },
+
+        setElementValue: function(el, value) {
+            var $el = $(el);
+
+            switch ($el[0].tagName) {
+                case "SPAN":
+                case "DIV":
+                    $el.text(value);
+                    break;
+                case "IMG":
+                    $el.attr('src', value);
+                    break;
+                case "INPUT":
+                    var type = $el.attr('type');
+                    if (type == 'checkbox' || type == 'radio') {
+                        $el.prop('checked', $el.val() == value);
+                    }
+                    // continue below
+                default:
+                    $el.val(value);
+            }
         }
     }
 })(jQuery);
 
 $.widget('custom.itembox', {
     options: {
+        box: null,
         tmpl_box: '<div />',
         tmpl_item: '<div />',
         tmpl_btn_remove: '<button type="button">X</button>',
@@ -283,14 +345,12 @@ $.widget('custom.itembox', {
         $target.attr('type', 'hidden');
         $target.addClass('aw-itembox');
 
-        this.$itembox = $(this.options.tmpl_box);
+        this.$itembox = this.options.box ? $(this.options.box) : $(this.options.tmpl_box).insertAfter($target);
         this.$itembox.addClass('aw-widget-itembox')
             .on('click', '.aw-widget-itembox-remove', function(e) {
                 e.preventDefault();
                 $(this).parent().remove();
             });
-
-        $target.after(this.$itembox);
 
         try {
             var val = $target.val();
@@ -324,6 +384,35 @@ $.widget('custom.itembox', {
         return $row;
     },
 
+    replace: function(originalRow, args) {
+        if (typeof args == 'string') {
+            $row = $(this.options.tmpl_item);
+            $row.html(args);
+        } else if (typeof args == 'object') {
+            $row = $(tmpl(this.options.tmpl_item, args));
+        }
+
+        $row.addClass('aw-widget-itembox-row');
+
+        if (this.options.is_btn_remove) {
+            var $btn_remove = $(this.options.tmpl_btn_remove);
+            $btn_remove.addClass('aw-widget-itembox-remove');
+            $row.append($btn_remove);
+        }
+
+        $row.insertAfter(originalRow);
+        $(originalRow).remove();
+
+        return $row;
+    },
+
+    clone: function(originalRow) {
+        var $row = $(originalRow).clone();
+        this.$itembox.append($row);
+
+        return $row;
+    },
+
     clear: function() {
         this.$itembox.find('.aw-widget-itembox-row').remove();
     },
@@ -347,7 +436,7 @@ $.widget('custom.typingtable', {
 
             $input = $('<input />');
             $input.val($el.html());
-            $input.attr('name', $el.attr('name'));
+            // $input.attr('name', $el.attr('name'));
             $input.attr('class', $el.attr('class'));
             $input.removeClass('aw-data-cell');
 
@@ -360,11 +449,11 @@ $.widget('custom.typingtable', {
         var $target = $(this.element);
         var top_attrs = '';
 
-        $.each(this.element.attributes, function() {
+        $.each(this.element[0].attributes, function() {
             if (!this.specified || this.name.indexOf('data-attr-') == -1)
                 return true;
 
-            top_attr += ' ' + this.name.replace('data-attr-') + '="' + $.awcomponent.escapeHtml(this.value) + '"';
+            top_attrs += ' ' + this.name.replace('data-attr-', '') + '="' + $.awcomponent.escapeHtml(this.value) + '"';
         });
 
         var wraptag = $target.attr('name');
@@ -427,7 +516,7 @@ $.widget('custom.typingtable', {
     },
 
     clearData: function() {
-        $('.aw-data-cell input').val('');
+        $(this.element).find('.aw-data-cell input').val('');
         this.updateData();
     },
 
@@ -437,7 +526,7 @@ $.widget('custom.typingtable', {
         if (!$input.length) return;
 
         $input.val(this.saveXML());
-    }
+    },
 });
 
 $.widget('custom.multiupload', {
@@ -558,53 +647,108 @@ $.widget('custom.multiupload', {
         filelist += ']';
 
         $(this.element).val(filelist);
-    }
+    },
+});
 
-    // changeHandler: function(e) {
-    //     var input = e.target;
+$.widget('custom.preupload', {
+    options: {
+        uploadURL: '/upload.php',
+        allow_extension: ['doc','docs','xls','xlsx','ppt','pptx','pdf','jpg','jpeg','png','gif','tif','hwp','txt'],
+        preview: null,
+        maxsize: 10485760,
+        multiple: false,
+        onResult: null
+    },
+    $fileinput: null,
+    $preview: null,
 
-    //     if (!input.value)
-    //         return;
+    _create: function() {
+        var $target = $(this.element);
 
-    //     var count = input.files.length;
-    //     for (i=0; i<count; i++) {
-    //         try {
-    //             var filename = input.files[i].name;
-    //             var filesize = input.files[i].size;
-    //             var fileext = filename.split('.').pop().toLowerCase();
-    //         } catch (e) {
-    //             console.log(e);
-    //             continue;
-    //         }
+        $target.addClass('aw-preupload');
+        this.$fileinput = $('<input type="file" name="uploadfiles[]" />');
+        this.$fileinput.prop('multiple', this.options.multiple)
+        this.$fileinput.insertAfter($target);
+        this.$fileinput.bind('change', $.proxy(this.changeHandler, this));
 
-    //         var is_allow_ext = false;
-    //         if (!$.inArray(fileext, input.allow_extension)) {
-    //             alert("업로드 할 수 없는 파일 유형입니다.");
-    //             input.value = "";
-    //             return;
-    //         }
+        this.$preview = $(this.options.preview);
+    },
 
-    //         // var totalsize = filesize;
-    //         // $('.file_size').each(function(i, el) {
-    //         //     totalsize += Number($(this).attr('data-byte'));
-    //         // });
+    changeHandler: function(e) {
+        var input = e.target;
 
-    //         // if (totalsize > 31457280) // 30MB
-    //         // {
-    //         //     pb_alert(__text_message147); // 파일은 30MB를 초과할 수 없습니다.
-    //         //     input.value = "";
-    //         //     return;
-    //         // }
+        if (!input.value)
+            return;
 
-    //         this.$filebox.itembox('add', {
-    //             'name': filename,
-    //             'size': Math.ceil(filesize / 1024) + 'kb',
-    //             'link': '#'
-    //         });
-    //     }
+        var count = input.files.length;
+        for (i=0; i<count; i++) {
+            try {
+                var filename = input.files[i].name;
+                var filesize = input.files[i].size;
+                var fileext = filename.split('.').pop().toLowerCase();
+            } catch (e) {
+                console.log(e);
+                continue;
+            }
 
-    //     input.value = "";
-    // },
+            var is_allow_ext = false;
+            if (!$.inArray(fileext, input.allow_extension)) {
+                alert("업로드 할 수 없는 파일 유형입니다.");
+                input.value = "";
+                return;
+            }
+
+            var totalsize = filesize;
+            if (totalsize > this.options.maxsize)
+            {
+                alert("파일 용량은 " + (this.options.maxsize/1024/1024) + "MB를 초과할 수 없습니다.");
+                input.value = "";
+                return;
+            }
+        }
+
+        if (count > 0) {
+            // this.$preview.attr('src', input.files[0]);
+
+            var preupload = this;
+            var $input = $(input);
+            var $form = $('<form>')
+                        .attr('action', this.options.uploadURL)
+                        .attr('method', 'post')
+                        .attr('enctype', 'multipart/form-data');
+
+            // $('body').append($form);
+
+            $form.insertAfter($input);
+            $form.append($input);
+
+            $form.ajaxForm({
+                beforeSubmit: function(data,form,option) {
+                    return true;
+                },
+                success: function (response, status) {
+                    uploaded_list = $.parseJSON(response);
+
+                    var first_link = '';
+                    try {
+                        first_link = uploaded_list[0].link;
+                    } catch (e) {}
+
+                    preupload.$preview.attr('src', first_link);
+
+                    if (preupload.options.onResult)
+                        preupload.options.onResult(uploaded_list);
+                },
+                error: function () {
+                    alert("파일 업로드에 실패하였습니다.");
+                }
+            });
+            $form.submit();
+            $input.unwrap();
+        }
+
+        input.value = '';
+    },
 });
 
 $.widget('custom.multidropdown', {
@@ -673,4 +817,112 @@ $.widget('custom.multidropdown', {
 
         // }
     }
+});
+
+$.widget('custom.dataform', {
+    options: {
+        writeButtonText: '추가',
+        modifyButtonText: '수정'
+    },
+    $form: null,
+    $list: null,
+    $btn_submit: null,
+    defaultFormDatas: {},
+    modifyItem: null,
+
+    _create: function() {
+        var $target = $(this.element);
+        $target.addClass('aw-previewimage');
+
+        this.$form = $target.find('.aw-dataform-form');
+        this.$list = this.options.itembox ? $(this.options.itembox) : $target.find('.aw-dataform-list');
+        this.$btn_submit = this.$form.find('.aw-action-submit');
+
+        this.defaultFormDatas = this.getFormDatas();
+
+        this.$form.on('click', '.aw-action-submit', $.proxy(function(e) {
+                e.preventDefault();
+
+                var data = this.getFormDatas();
+
+                if (this.modifyItem) {
+                    this.$list.itembox('replace', this.modifyItem, data);
+                } else {
+                    this.$list.itembox('add', data);
+                }
+
+                this.changeWrite();
+            }, this))
+        .on('click', '.aw-action-cancel', $.proxy(function(e) {
+                e.preventDefault();
+
+                this.changeWrite();
+            }, this));
+
+        $target.on('click', '.aw-action-modify', $.proxy(function(e) {
+                e.preventDefault();
+                var $row = $(e.target).closest('.aw-widget-itembox-row');
+                this.changeModify($row);
+            }, this))
+        .on('click', '.aw-action-clone', $.proxy(function(e) {
+                e.preventDefault();
+                var $row = $(e.target).closest('.aw-widget-itembox-row');
+                this.$list.itembox('clone', $row);
+            }, this))
+        .on('click', '.aw-action-delete', function(e) {
+            e.preventDefault();
+            $(e.target).closest('.aw-widget-itembox-row').remove();
+        });
+
+        try {
+            list = $.parseJSON($target.val());
+
+            for (var i in list) {
+                var $row = this.$list.itembox('add', list[i]);
+            }
+        } catch (e) {}
+    },
+
+    getFormDatas: function() {
+        var data = {};
+
+        this.$form.find('.aw-dataform-item').each($.proxy(function(i, el) {
+            data[$(el).attr('data-bind')] = $.awcomponent.getElementValue(el);
+        }, this));
+
+        return data;
+    },
+
+    initForm: function(e) {
+        this.$form.find('.aw-dataform-item').each($.proxy(function(i, el) {
+            var $el = $(el);
+            $.awcomponent.setElementValue(el, this.defaultFormDatas[$el.attr('data-bind')]);
+        }, this));
+    },
+
+    changeWrite: function() {
+        this.initForm();
+        this.$btn_submit.text(this.options.writeButtonText);
+        this.modifyItem = null;
+    },
+
+    changeModify: function(item) {
+        this.initForm();
+
+        var data = {};
+        $(item).find('.aw-bind-data').each($.proxy(function(i, el) {
+            try {
+                data[$(el).attr('data-bind')] = $.awcomponent.getElementValue(el);
+            } catch (e) {}
+        }), this);
+
+        this.$form.find('.aw-dataform-item').each($.proxy(function(i, el) {
+            try {
+                $.awcomponent.setElementValue(el, data[$(el).attr('data-bind')]);
+            } catch (e) {}
+        }), this);
+
+        this.$btn_submit.text(this.options.modifyButtonText);
+        this.modifyItem = item;
+    },
 });
