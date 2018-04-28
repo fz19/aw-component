@@ -42,8 +42,8 @@
             else
                 $target = $('.aw-format');
 
-            $target.unbind('keyup', $.awcomponent.formatHandler)
-                .bind('keyup', $.awcomponent.formatHandler)
+            $target.off('keyup', $.awcomponent.formatHandler)
+                .on('keyup', $.awcomponent.formatHandler)
                 .trigger('keyup');
         },
 
@@ -284,6 +284,8 @@
             var $el = $(el);
             var result = '';
 
+            $el.trigger('update');
+
             switch ($el[0].tagName) {
                 case "SPAN":
                 case "DIV":
@@ -336,14 +338,16 @@ $.widget('custom.itembox', {
         tmpl_box: '<div />',
         tmpl_item: '<div />',
         tmpl_btn_remove: '<button type="button">X</button>',
-        is_btn_remove: true
+        is_btn_remove: true,
     },
     $itembox: null,
 
     _create: function() {
         var $target = $(this.element);
         $target.attr('type', 'hidden');
-        $target.addClass('aw-itembox');
+        $target.addClass('aw-itembox')
+            .on('update', $.proxy(this.updateData, this))
+            .on('load', $.proxy(this.loadData, this));
 
         this.$itembox = this.options.box ? $(this.options.box) : $(this.options.tmpl_box).insertAfter($target);
         this.$itembox.addClass('aw-widget-itembox')
@@ -352,15 +356,7 @@ $.widget('custom.itembox', {
                 $(this).parent().remove();
             });
 
-        try {
-            var val = $target.val();
-            if (val[0] != '[')val = '[' + val + ']';
-            var data = $.parseJSON(val);
-            for (var i in data)
-                this.add(data[i]);
-        } catch (e) {
-            console.log(e);
-        }
+        this.loadData();
     },
 
     add: function(args) {
@@ -419,7 +415,28 @@ $.widget('custom.itembox', {
 
     getElement: function() {
         return this.$itembox;
-    }
+    },
+
+    loadData: function() {
+        try {
+            var val = $(this.element).val();
+            if (val[0] != '[')val = '[' + val + ']';
+            var data = $.parseJSON(val);
+            for (var i in data)
+                this.add(data[i]);
+        } catch (e) {
+            console.log(e);
+        }
+    },
+
+    updateData: function() {
+        var data = [];
+        this.$itembox.find('.aw-itembox-data').each(function(i, el) {
+            data.push($(el).val());
+        });
+
+        $(this.element).val('[' + data.join(',') + ']');
+    },
 });
 
 $.widget('custom.typingtable', {
@@ -427,22 +444,12 @@ $.widget('custom.typingtable', {
 
     _create: function() {
         var $target = $(this.element);
-        $target.addClass('aw-typingtable');
-        $target.find('.aw-data-cell').each(function (i, el) {
-            var $el = $(el);
-            var $input = $el.children('input');
-            if ($input.length)
-                return true;
+        $target.addClass('aw-typingtable')
+            .on('clear', this.clearData)
+            .on('update', this.updateData)
+            .on('load', this.loadData);
 
-            $input = $('<input />');
-            $input.val($el.html());
-            // $input.attr('name', $el.attr('name'));
-            $input.attr('class', $el.attr('class'));
-            $input.removeClass('aw-data-cell');
-
-            $el.removeClass('aw-format');
-            $el.html($input);
-        });
+        this.loadData();
     },
 
     saveXML: function() {
@@ -520,6 +527,25 @@ $.widget('custom.typingtable', {
         this.updateData();
     },
 
+    loadData: function() {
+        var $target = $(this.element);
+        $target.find('.aw-data-cell').each(function (i, el) {
+            var $el = $(el);
+            var $input = $el.children('input');
+            if ($input.length)
+                return true;
+
+            $input = $('<input />');
+            $input.val($el.html());
+            // $input.attr('name', $el.attr('name'));
+            $input.attr('class', $el.attr('class'));
+            $input.removeClass('aw-data-cell');
+
+            $el.removeClass('aw-format');
+            $el.html($input);
+        });
+    },
+
     updateData: function() {
         var $target = $(this.element);
         var $input = $($target.find('.aw-data-table').get(0));
@@ -546,7 +572,7 @@ $.widget('custom.multiupload', {
         $target.addClass('aw-multiupload');
         this.$fileinput = $('<input type="file" name="uploadfiles[]" multiple />');
         this.$fileinput.insertAfter($target);
-        this.$fileinput.bind('change', $.proxy(this.changeHandler, this));
+        this.$fileinput.on('change', $.proxy(this.changeHandler, this));
 
         if (this.options.itembox) {
             this.$filebox = $(this.options.itembox);
@@ -637,6 +663,7 @@ $.widget('custom.multiupload', {
     },
 
     updateData: function() {
+        //this.$filebox.trigger('update'); TODO: 이 값으로 사용할 필요 있음, input를 itembox를 쓸지 multipupload로 쓸지 고려 필요
         var filelist = '[';
 
         this.$itembox.find('.aw-widget-itembox-row').each(function (i, el) {
@@ -669,7 +696,7 @@ $.widget('custom.preupload', {
         this.$fileinput = $('<input type="file" name="uploadfiles[]" />');
         this.$fileinput.prop('multiple', this.options.multiple)
         this.$fileinput.insertAfter($target);
-        this.$fileinput.bind('change', $.proxy(this.changeHandler, this));
+        this.$fileinput.on('change', $.proxy(this.changeHandler, this));
 
         this.$preview = $(this.options.preview);
     },
@@ -809,7 +836,7 @@ $.widget('custom.multidropdown', {
             $(this).children().remove();
             $(this).append('<option value="">-</option>')
         })
-        .bind('change', $.proxy(this.changeHandler, this));
+        .on('change', $.proxy(this.changeHandler, this));
 
         this.ajaxGetList(this.$selects.eq(0));
 
