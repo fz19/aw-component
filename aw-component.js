@@ -328,6 +328,8 @@
                 default:
                     $el.val(value);
             }
+
+            $el.trigger('load');
         }
     }
 })(jQuery);
@@ -347,7 +349,8 @@ $.widget('custom.itembox', {
         $target.attr('type', 'hidden');
         $target.addClass('aw-itembox')
             .on('update', $.proxy(this.updateData, this))
-            .on('load', $.proxy(this.loadData, this));
+            .on('load', $.proxy(this.loadData, this))
+            .on('reset', $.proxy(this.clear, this));
 
         this.$itembox = this.options.box ? $(this.options.box) : $(this.options.tmpl_box).insertAfter($target);
         this.$itembox.addClass('aw-widget-itembox')
@@ -360,6 +363,7 @@ $.widget('custom.itembox', {
     },
 
     add: function(args) {
+        console.log(args);
         if (typeof args == 'string') {
             $row = $(this.options.tmpl_item);
             $row.html(args);
@@ -914,7 +918,7 @@ $.widget('custom.dataform', {
         var data = {};
 
         this.$form.find('.aw-dataform-item').each($.proxy(function(i, el) {
-            data[$(el).attr('data-bind')] = $.awcomponent.getElementValue(el);
+            data[$(el).attr('data-bind')] = $.awcomponent.getElementValue(el); // TODO: 아이템박스 데이터 json으로 처리할것!
         }, this));
 
         return data;
@@ -924,6 +928,7 @@ $.widget('custom.dataform', {
         this.$form.find('.aw-dataform-item').each($.proxy(function(i, el) {
             var $el = $(el);
             $.awcomponent.setElementValue(el, this.defaultFormDatas[$el.attr('data-bind')]);
+            $el.trigger('reset');
         }, this));
     },
 
@@ -937,6 +942,11 @@ $.widget('custom.dataform', {
         this.initForm();
 
         var data = {};
+        try {
+            var $data_row = $(item).find('.aw-data-json');
+            data = $.parseJSON($.awcomponent.getElementValue($data_row));
+        } catch (e) {}
+
         $(item).find('.aw-bind-data').each($.proxy(function(i, el) {
             try {
                 data[$(el).attr('data-bind')] = $.awcomponent.getElementValue(el);
