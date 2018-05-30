@@ -449,9 +449,9 @@ $.widget('custom.typingtable', {
     _create: function() {
         var $target = $(this.element);
         $target.addClass('aw-typingtable')
-            .on('clear', this.clearData)
-            .on('update', this.updateData)
-            .on('load', this.loadData);
+            .on('clear', $.proxy(this.clearData, this))
+            .on('update', $.proxy(this.updateData, this))
+            .on('load', $.proxy(this.loadData, this));
 
         this.loadData();
     },
