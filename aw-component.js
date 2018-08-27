@@ -78,10 +78,14 @@
             });
 
             $('.aw-multiupload').each(function(i, el) {
-                var template_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item', 'box'], el);
-                $(el).multiupload({
-                    itembox_options: template_options
-                });
+                var options = {};
+
+                options.itembox_options = $.awcomponent.initWidgetTemplateOptions(['btn_remove', 'item', 'box'], el);
+
+                if ($(el).attr('data-upload-url'))
+                    options.uploadURL = $(el).attr('data-upload-url');
+
+                $(el).multiupload(options);
             });
 
             $('.aw-dataform').each(function(i, el) {
@@ -153,15 +157,21 @@
                 if ($tmpl.length) {
                     for (var i in optionNames) {
                         var $item_tmpl = $tmpl.find('.tmpl_' + optionNames[i]);
-                        if ($item_tmpl.length) {
-                            options['tmpl_' + optionNames[i]] = $item_tmpl.prop('outerHTML');
+                        if (!$item_tmpl.length)
+                            continue;
+
+                        options['tmpl_' + optionNames[i]] = $item_tmpl.prop('outerHTML');
+
+                        if ($item_tmpl.hasClass('action-tmpl-init-remove')) {
+                            $item_tmpl.removeClass('action-tmpl-init-remove');
+                            $item_tmpl.remove();
                         }
                     }
 
                     $tmpl.remove();
                 }
             }
-            console.log(options);
+            // console.log(options);
 
             for (var i in optionNames) {
                 if ($el.attr('data-tmpl' + optionNames[i])) {
@@ -235,11 +245,16 @@
                     var num_str = num.toString()
                     var result = '';
 
-                    var second_position = num.length > 10 ? 7 : 6;
+                    var first_position = num_str.substring(0,2) == '02' ? 2 : 3;
+                    var second_position = 7;
+                    if (first_position == 2)
+                        second_position = num.length > 9 ? 6 : 5;
+                    else
+                        second_position = num.length > 10 ? 7 : 6;
 
-                    for(var i=0; i<num_str.length; i++) {
+                    for(var i=0; i<num_str.length; i++) {2
                         var tmp = i;
-                        if(i == 3 || i == second_position) result = result+'-'
+                        if(i == first_position || i == second_position) result = result+'-'
                         result = result+num_str.charAt(tmp);
                     }
 
@@ -363,7 +378,7 @@ $.widget('custom.itembox', {
     },
 
     add: function(args) {
-        console.log(args);
+        // console.log(args);
         if (typeof args == 'string') {
             $row = $(this.options.tmpl_item);
             $row.html(args);
@@ -449,9 +464,9 @@ $.widget('custom.typingtable', {
     _create: function() {
         var $target = $(this.element);
         $target.addClass('aw-typingtable')
-            .on('clear', $.proxy(this.clearData, this))
-            .on('update', $.proxy(this.updateData, this))
-            .on('load', $.proxy(this.loadData, this));
+            .on('clear', this.clearData)
+            .on('update', this.updateData)
+            .on('load', this.loadData);
 
         this.loadData();
     },
@@ -565,7 +580,8 @@ $.widget('custom.multiupload', {
         allow_extension: ['doc','docs','xls','xlsx','ppt','pptx','pdf','jpg','jpeg','png','gif','tif','hwp','txt'],
         itembox: null,
         itembox_options: {},
-        maxsize: 10485760
+        maxsize: 10485760,
+        onReceived: null // 업로드 결과 반환시 결과 데이터를 인자값으로 넘기고 리턴값으로 결과 재입력
     },
     $fileinput: null,
     $filebox: null,
@@ -574,7 +590,7 @@ $.widget('custom.multiupload', {
         var $target = $(this.element);
 
         $target.addClass('aw-multiupload');
-        this.$fileinput = $('<input type="file" name="uploadfiles[]" multiple />');
+        this.$fileinput = $('<input type="file" name="uploadfiles[]" size="1" multiple />');
         this.$fileinput.insertAfter($target);
         this.$fileinput.on('change', $.proxy(this.changeHandler, this));
 
@@ -607,8 +623,7 @@ $.widget('custom.multiupload', {
                 continue;
             }
 
-            var is_allow_ext = false;
-            if (!$.inArray(fileext, input.allow_extension)) {
+            if ($.inArray(fileext, this.options.allow_extension) === -1) {
                 alert("업로드 할 수 없는 파일 유형입니다.");
                 input.value = "";
                 return;
@@ -642,6 +657,10 @@ $.widget('custom.multiupload', {
                 },
                 success: function (response, status) {
                     uploaded_list = $.parseJSON(response);
+
+                    if (multiupload.options.onReceived)
+                        uploaded_list = multiupload.options.onReceived(multiupload.element, uploaded_list);
+
                     multiupload.addJSON(uploaded_list);
                 },
                 error: function () {
@@ -657,11 +676,8 @@ $.widget('custom.multiupload', {
 
     addJSON: function(uploaded_list) {
         for (var i in uploaded_list) {
-            var $row = this.$filebox.itembox('add', {
-                'name': uploaded_list[i].name,
-                'size': $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].size / 1024)) + 'kb',
-                'link': uploaded_list[i].link
-            });
+            uploaded_list[i].size = $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].size / 1024)) + 'kb';
+            var $row = this.$filebox.itembox('add', uploaded_list[i]);
             $row.attr('data-json', JSON.stringify(uploaded_list[i]));
         }
     },
@@ -691,18 +707,22 @@ $.widget('custom.preupload', {
         onResult: null
     },
     $fileinput: null,
-    $preview: null,
 
     _create: function() {
         var $target = $(this.element);
 
         $target.addClass('aw-preupload');
-        this.$fileinput = $('<input type="file" name="uploadfiles[]" />');
+        this.$fileinput = $('<input type="file" name="uploadfiles[]" size="1" />');
         this.$fileinput.prop('multiple', this.options.multiple)
         this.$fileinput.insertAfter($target);
         this.$fileinput.on('change', $.proxy(this.changeHandler, this));
+    },
 
-        this.$preview = $(this.options.preview);
+    _setOption: function(key, value) {
+        if (key === "multiple") {
+            this.$fileinput.prop('multiple', value);
+        }
+        this._super(key, value);
     },
 
     changeHandler: function(e) {
@@ -722,8 +742,7 @@ $.widget('custom.preupload', {
                 continue;
             }
 
-            var is_allow_ext = false;
-            if (!$.inArray(fileext, input.allow_extension)) {
+            if (!$.inArray(fileext, this.options.allow_extension) === -1) {
                 alert("업로드 할 수 없는 파일 유형입니다.");
                 input.value = "";
                 return;
@@ -739,8 +758,6 @@ $.widget('custom.preupload', {
         }
 
         if (count > 0) {
-            // this.$preview.attr('src', input.files[0]);
-
             var preupload = this;
             var $input = $(input);
             var $form = $('<form>')
@@ -760,15 +777,8 @@ $.widget('custom.preupload', {
                 success: function (response, status) {
                     uploaded_list = $.parseJSON(response);
 
-                    var first_link = '';
-                    try {
-                        first_link = uploaded_list[0].link;
-                    } catch (e) {}
-
-                    preupload.$preview.attr('src', first_link);
-
                     if (preupload.options.onResult)
-                        preupload.options.onResult(uploaded_list);
+                        preupload.options.onResult(preupload.element, uploaded_list);
                 },
                 error: function () {
                     alert("파일 업로드에 실패하였습니다.");
@@ -882,6 +892,8 @@ $.widget('custom.dataform', {
                     this.$list.itembox('add', data);
                 }
 
+                $target.trigger('change');
+
                 this.changeWrite();
             }, this))
         .on('click', '.aw-action-cancel', $.proxy(function(e) {
@@ -893,16 +905,19 @@ $.widget('custom.dataform', {
         $target.on('click', '.aw-action-modify', $.proxy(function(e) {
                 e.preventDefault();
                 var $row = $(e.target).closest('.aw-widget-itembox-row');
+                $target.trigger('change');
                 this.changeModify($row);
             }, this))
         .on('click', '.aw-action-clone', $.proxy(function(e) {
                 e.preventDefault();
                 var $row = $(e.target).closest('.aw-widget-itembox-row');
                 this.$list.itembox('clone', $row);
+                $target.trigger('change');
             }, this))
         .on('click', '.aw-action-delete', function(e) {
             e.preventDefault();
             $(e.target).closest('.aw-widget-itembox-row').remove();
+            $target.trigger('change');
         });
 
         try {
@@ -962,4 +977,8 @@ $.widget('custom.dataform', {
         this.$btn_submit.text(this.options.modifyButtonText);
         this.modifyItem = item;
     },
+
+    getModifyItem: function() {
+        return this.modifyItem;
+    }
 });
