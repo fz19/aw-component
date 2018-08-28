@@ -338,6 +338,7 @@
                     var type = $el.attr('type');
                     if (type == 'checkbox' || type == 'radio') {
                         $el.prop('checked', $el.val() == value);
+                        break;
                     }
                     // continue below
                 default:
