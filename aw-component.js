@@ -337,7 +337,11 @@
                 case "INPUT":
                     var type = $el.attr('type');
                     if (type == 'checkbox' || type == 'radio') {
-                        $el.prop('checked', $el.val() == value);
+                        if (Array.isArray(value))
+                            $el.prop('checked', value.indexOf($el.val()) !== -1);
+                        else
+                            $el.prop('checked', $el.val() == value);
+
                         break;
                     }
                     // continue below
@@ -598,13 +602,13 @@ $.widget('custom.multiupload', {
         if (this.options.itembox) {
             this.$filebox = $(this.options.itembox);
         } else {
-            this.$filebox = $('<input>').insertAfter(this.$fileinput).itembox(this.options.itembox_options);
+            this.$filebox = $target.insertAfter(this.$fileinput).itembox(this.options.itembox_options);
         }
 
-        try {
-            uploaded_list = $.parseJSON($target.val());
-            this.addJSON(uploaded_list);
-        } catch (e) {}
+        // try {
+        //     uploaded_list = $.parseJSON($target.val());
+        //     this.addJSON(uploaded_list);
+        // } catch (e) {}
     },
 
     changeHandler: function(e) {
@@ -677,7 +681,7 @@ $.widget('custom.multiupload', {
 
     addJSON: function(uploaded_list) {
         for (var i in uploaded_list) {
-            uploaded_list[i].size = $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].size / 1024)) + 'kb';
+            uploaded_list[i].filesize = $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].filesize / 1024)) + 'kb';
             var $row = this.$filebox.itembox('add', uploaded_list[i]);
             $row.attr('data-json', JSON.stringify(uploaded_list[i]));
         }
