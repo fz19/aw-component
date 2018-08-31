@@ -259,6 +259,22 @@
                     }
 
                     return result;
+                
+                case 'filesize':
+                    var num = Number(text);
+                    if (isNaN(num))
+                        return '0';
+
+                    var units = ['b', 'kb', 'mb', 'gb'];
+                    for (var i in units)
+                    {
+                        if (num < 1024)
+                            break;
+                        
+                        num /= 1024;
+                    }
+
+                    return this.textFormat('number', Math.ceil(num)) + units[i];
             }
 
             return text;
@@ -681,7 +697,6 @@ $.widget('custom.multiupload', {
 
     addJSON: function(uploaded_list) {
         for (var i in uploaded_list) {
-            uploaded_list[i].filesize = $.awcomponent.textFormat('number', Math.ceil(uploaded_list[i].filesize / 1024)) + 'kb';
             var $row = this.$filebox.itembox('add', uploaded_list[i]);
             $row.attr('data-json', JSON.stringify(uploaded_list[i]));
         }
