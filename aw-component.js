@@ -68,8 +68,8 @@
             $('.aw-preupload').each(function(i, el) {
                 var options = {};
 
-                if ($(el).attr('data-preview'))
-                    options.preview = $(el).attr('data-preview');
+                // if ($(el).attr('data-preview'))
+                //     options.preview = $(el).attr('data-preview');
 
                 if ($(el).attr('data-upload-url'))
                     options.uploadURL = $(el).attr('data-upload-url');
@@ -259,7 +259,7 @@
                     }
 
                     return result;
-                
+
                 case 'filesize':
                     var num = Number(text);
                     if (isNaN(num))
@@ -270,7 +270,7 @@
                     {
                         if (num < 1024)
                             break;
-                        
+
                         num /= 1024;
                     }
 
@@ -721,7 +721,6 @@ $.widget('custom.preupload', {
     options: {
         uploadURL: '/upload.php',
         allow_extension: ['doc','docs','xls','xlsx','ppt','pptx','pdf','jpg','jpeg','png','gif','tif','hwp','txt'],
-        preview: null,
         maxsize: 10485760,
         multiple: false,
         onResult: null
