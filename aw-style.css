@@ -2,10 +2,11 @@
 
 .aw-style-formtable {
     border-collapse: collapse;
-    border-top: 5px solid #92ADE3;
+    border-top: 4px solid rgb(163, 194, 216);
     font-size: 0.9em;
     color: #333;
     caption-side: bottom;
+    width: 100%;
 }
 
 .aw-style-formtable > caption {
@@ -29,7 +30,8 @@
 .aw-style-formtable th {
     background: #f1f1f1;
     min-width: 150px;
-    text-align: center;
+    padding: 20px;
+    text-align: left;
 }
 
 .aw-style-formtable td {
@@ -42,6 +44,7 @@
     border-collapse: collapse;
     font-size: 0.9em;
     color: #333;
+    width: 100%;
 }
 
 .aw-style-datatable th, .aw-style-datatable td {
@@ -82,6 +85,11 @@ label > .aw-style-label {
 .aw-style-input {
     padding: 6px 4px;
     border: 1px solid #bbb;
+    font-size: 1em;
+}
+
+.aw-style-input::placeholder {
+    font-size: 0.9em;
 }
 
 .aw-style-readonly {
@@ -102,6 +110,7 @@ textarea.aw-style-input {
     border-bottom-left-radius: 0.5em 0.5em;
     border-top-right-radius: 0.5em 0.5em;
     border-top-left-radius: 0.5em 0.5em;
+    text-decoration: inherit;
     cursor: pointer;
 }
 
@@ -119,19 +128,20 @@ textarea.aw-style-input {
 
 .aw-style-bigbtn {
     position: relative;
-    padding: 0.6em 1.2em;
-    font-size: 1.1em;
+    padding: 0.7em 2.4em;
+    font-size: 0.85em;
     font-family: inherit;
-    font-weight: 500;
+    font-weight: 900;
     color: #fff;
     border: 0;
     background: #999;
-    border-bottom-right-radius: 0.4em 0.4em;
-    border-bottom-left-radius: 0.4em 0.4em;
-    border-top-right-radius: 0.4em 0.4em;
-    border-top-left-radius: 0.4em 0.4em;
-    box-shadow: 2px 2px 8px #ccc;
+    border-bottom-right-radius: 0.2em 0.2em;
+    border-bottom-left-radius: 0.2em 0.2em;
+    border-top-right-radius: 0.2em 0.2em;
+    border-top-left-radius: 0.2em 0.2em;
+    /* box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3); */
     margin-right: 5px;
+    text-decoration: inherit;
     cursor: pointer;
 }
 
@@ -144,16 +154,29 @@ textarea.aw-style-input {
 }
 
 .aw-style-bigbtn-blue {
-    background: #3e7edf;
+    background: #3A78C5;
 }
 .aw-style-bigbtn-blue:hover {
     background: #4e86da;
+}
+
+.aw-style-bigbtn-white {
+    background: #fff;
+    color: #003869;
+}
+.aw-style-bigbtn-white:hover {
+    background: #f1f1f1;
 }
 
 /* aw style texts */
 
 .aw-style-text-info {
     color: #000;
+    font-size: 0.8em;
+}
+
+.aw-style-text-warning {
+    color: #C63;
     font-size: 0.8em;
 }
 

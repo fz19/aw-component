@@ -117,17 +117,16 @@
         },
 
         disableBackspaceKey: function() {
-            document.onkeydown = function(event) {
-                event = event || window.event;
-                var target = event.target || event.srcElement;
-                if (target.type == "text" || target.type == "textarea") {
+            $('document').on('keydown', function(e) {
+                var target = e.target;
+                if (target.type == "text" || target.type == "textarea" || target.type == "input") {
                     if(event.keyCode==8 && $(event.srcElement).attr('readonly')) {
                         return false;
                     }
                 }else{
                     if(event.keyCode==8) return false;
                 }
-            }
+            });
         },
 
         escapeHtml: function(text) {
@@ -667,9 +666,11 @@ $.widget('custom.multiupload', {
                         .attr('method', 'post')
                         .attr('enctype', 'multipart/form-data');
 
-            // $('body').append($form);
+            var $newInput = $input.clone();
+            $newInput.insertAfter($input);
+            $newInput[0].value = '';
 
-            $form.insertAfter($input);
+            $('body').append($form);
             $form.append($input);
 
             $form.ajaxForm({
@@ -688,8 +689,12 @@ $.widget('custom.multiupload', {
                     alert("파일 업로드에 실패하였습니다.");
                 }
             });
+
             $form.submit();
-            $input.unwrap();
+            $form.remove();
+
+            this.$fileinput = $newInput;
+            this.$fileinput.on('change', $.proxy(this.changeHandler, this));
         }
 
         input.value = '';
@@ -761,7 +766,7 @@ $.widget('custom.preupload', {
                 continue;
             }
 
-            if (!$.inArray(fileext, this.options.allow_extension) === -1) {
+            if ($.inArray(fileext, this.options.allow_extension) === -1) {
                 alert("업로드 할 수 없는 파일 유형입니다.");
                 input.value = "";
                 return;
