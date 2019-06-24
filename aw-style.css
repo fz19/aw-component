@@ -201,6 +201,13 @@ a.aw-style-btn {
     background: #dab24e;
 }
 
+.aw-style-bigbtn-green {
+    background: #4ac53a;
+}
+.aw-style-bigbtn-green:hover {
+    background: #4eda55;
+}
+
 
 /* aw style texts */
 
