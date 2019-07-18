@@ -887,7 +887,8 @@ $.widget('custom.multidropdown', {
 $.widget('custom.dataform', {
     options: {
         writeButtonText: '추가',
-        modifyButtonText: '수정'
+        modifyButtonText: '수정',
+        customConvertMultipleDatas: null // 한번에 여러 데이터를 등록하기 위해 getFormDatas의 값을 받아 복제하여 달라지는 값만 수정하고 array로 반환
     },
     $form: null,
     $list: null,
@@ -907,13 +908,21 @@ $.widget('custom.dataform', {
 
         this.$form.on('click', '.aw-action-submit', $.proxy(function(e) {
                 e.preventDefault();
-
                 var data = this.getFormDatas();
 
                 if (this.modifyItem) {
+                    // Modfiy
                     this.$list.itembox('replace', this.modifyItem, data);
                 } else {
-                    this.$list.itembox('add', data);
+                    if (this.options.customConvertMultipleDatas)
+                        data = $.proxy(this.options.customConvertMultipleDatas, this)(data);
+
+                    if (!Array.isArray(data))
+                        data = [data];
+
+                    // Add
+                    for (var i in data)
+                        this.$list.itembox('add', data[i]);
                 }
 
                 $target.trigger('change');
