@@ -8,7 +8,7 @@
   "license": "Apache License 2.0",
   "dependencies": {
     "blueimp-tmpl": "https://github.com/blueimp/JavaScript-Templates",
-    "jquery": "1",
+    "jquery": "3",
     "jquery-form": "^4.2.2",
     "jquery-ui": "1"
   }
